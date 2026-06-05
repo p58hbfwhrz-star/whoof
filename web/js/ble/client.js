@@ -212,17 +212,21 @@ export class WhoopClient {
 
   async _postConnectFlow() {
     // 1. Strap identity / status
-    try { await this.sendHello(); } catch (e) { this._emit('error', e); }
+    console.log('[whoof] sendHello start');
+    try { await this.sendHello(); } catch (e) { console.error('[whoof] sendHello failed', e); this._emit('error', e); }
+    console.log('[whoof] sendHello done');
 
     // 2. Time sync — Web BLE doesn't always surface RTC_LOST quickly enough,
     //    so we proactively check current strap clock and set if drifted.
+    console.log('[whoof] getClock start');
     try {
       const strapUnix = await this.getClock();
       const hostUnix = Math.floor(Date.now() / 1000);
+      console.log('[whoof] getClock done strapUnix=' + strapUnix);
       if (strapUnix && Math.abs(hostUnix - strapUnix) > RTC_DRIFT_THRESHOLD_S) {
         await this.setClock();
       }
-    } catch (e) { this._emit('error', e); }
+    } catch (e) { console.error('[whoof] getClock failed', e); this._emit('error', e); }
 
     // 3 & 4. Start realtime immediately so live HR shows up on mobile/Bluefy,
     //        then backfill history in parallel. History can take up to 30s to
