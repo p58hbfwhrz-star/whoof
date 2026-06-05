@@ -154,10 +154,6 @@ async function setupAndConnect(deviceToUse = null) {
     if (nowAgo) nowAgo.textContent = 'live';
 
     // Update Live tab fields directly from BLE packet (works without a server)
-    const liveSpo2 = document.getElementById('live-spo2');
-    if (liveSpo2 && pkt.spo2Pct != null) liveSpo2.textContent = Math.round(pkt.spo2Pct);
-    const liveTemp = document.getElementById('live-temp');
-    if (liveTemp && pkt.skinTempC != null) liveTemp.textContent = pkt.skinTempC.toFixed(1);
     const liveStatus = document.getElementById('live-status');
     if (liveStatus) liveStatus.textContent = 'live · connected';
     const liveRr = document.getElementById('live-rr');

@@ -1384,19 +1384,25 @@ function renderTrendsTable(days) {
 async function loadLive() {
   // If no server is available (e.g. Bluefy/mobile), live fields are updated
   // directly by app-mvp.js via BLE events — just skip the API call gracefully.
+  // On mobile (Bluefy) there is no Python backend — app-mvp.js updates the
+  // live fields directly from BLE events. Skip the API call and don't
+  // overwrite those values.
   let data = { points: [], latest_sample: null, battery: null };
-  try { data = await fetchJSON("/api/live?seconds=300"); } catch (_) {}
-  const last = data.latest_sample;
-  if (last) {
-    $("live-hr").textContent = fmtInt(last.heart_rate_bpm);
-    $("live-spo2").textContent = last.spo2_pct ?? "—";
-    $("live-temp").textContent = last.skin_temp_c != null ? last.skin_temp_c.toFixed(1) : "—";
-    const ago = Math.round((Date.now() - new Date(last.ts_utc)) / 1000);
-    $("live-status").textContent = ago < 60 ? `last sample ${ago}s ago` : `last sample ${Math.round(ago / 60)}m ago`;
-  } else if (!$("live-hr").textContent || $("live-hr").textContent === "—") {
-    $("live-status").textContent = "Connect your strap to see live data";
+  let hasServer = false;
+  try { data = await fetchJSON("/api/live?seconds=300"); hasServer = true; } catch (_) {}
+  if (hasServer) {
+    const last = data.latest_sample;
+    if (last) {
+      $("live-hr").textContent = fmtInt(last.heart_rate_bpm);
+      $("live-spo2").textContent = last.spo2_pct ?? "—";
+      $("live-temp").textContent = last.skin_temp_c != null ? last.skin_temp_c.toFixed(1) : "—";
+      const ago = Math.round((Date.now() - new Date(last.ts_utc)) / 1000);
+      $("live-status").textContent = ago < 60 ? `last sample ${ago}s ago` : `last sample ${Math.round(ago / 60)}m ago`;
+    } else {
+      $("live-status").textContent = "no samples yet";
+    }
+    $("live-battery").textContent = data.battery ? data.battery.detail : "—";
   }
-  $("live-battery").textContent = data.battery ? data.battery.detail : "—";
 
   const labels = data.points.map((p) => p.t.slice(11, 19));
   makeOrUpdate("live-chart", {
