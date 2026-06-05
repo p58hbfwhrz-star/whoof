@@ -154,10 +154,30 @@ export class WhoopClient {
   async _connect() {
     this._setState('connecting');
     console.log('[whoof] gatt.connect start, already=' + this.device.gatt.connected);
-    // Skip gatt.connect() entirely — Bluefy connects when the user selects
-    // the device in the picker, so the server is already usable.
-    this.server = this.device.gatt;
-    console.log('[whoof] gatt skipped, server=' + !!this.server);
+    if (this.device.gatt.connected) {
+      this.server = this.device.gatt;
+      console.log('[whoof] gatt already connected');
+    } else {
+      // Bluefy: gatt.connect() resolves only after the OS connects.
+      // Poll connected flag for up to 15s rather than awaiting the promise.
+      this.device.gatt.connect().catch(() => {});
+      console.log('[whoof] waiting for gatt.connected...');
+      await new Promise((resolve, reject) => {
+        const start = Date.now();
+        const iv = setInterval(() => {
+          console.log('[whoof] connected=' + this.device.gatt.connected);
+          if (this.device.gatt.connected) {
+            clearInterval(iv);
+            resolve();
+          } else if (Date.now() - start > 15000) {
+            clearInterval(iv);
+            reject(new Error('gatt connect timeout after 15s'));
+          }
+        }, 500);
+      });
+      this.server = this.device.gatt;
+      console.log('[whoof] gatt connected via poll');
+    }
 
     function getServiceWithTimeout(server, uuid, ms) {
       return Promise.race([
