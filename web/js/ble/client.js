@@ -159,16 +159,24 @@ export class WhoopClient {
     this.server = this.device.gatt;
     console.log('[whoof] gatt skipped, server=' + !!this.server);
 
+    function getServiceWithTimeout(server, uuid, ms) {
+      return Promise.race([
+        server.getPrimaryService(uuid),
+        new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('timeout'), { name: 'NotFoundError' })), ms)),
+      ]);
+    }
     let service;
     try {
       console.log('[whoof] probing whoop5 service');
-      service = await this.server.getPrimaryService(FAMILIES.whoop5.service);
+      service = await getServiceWithTimeout(this.server, FAMILIES.whoop5.service, 5000);
       this._family = 'whoop5';
+      console.log('[whoof] whoop5 service found');
     } catch (err) {
       if (err && err.name && err.name !== 'NotFoundError') throw err;
       console.log('[whoof] probing whoop4 service');
-      service = await this.server.getPrimaryService(FAMILIES.whoop4.service);
+      service = await getServiceWithTimeout(this.server, FAMILIES.whoop4.service, 5000);
       this._family = 'whoop4';
+      console.log('[whoof] whoop4 service found');
     }
     console.log('[whoof] family=' + this._family);
     const f = FAMILIES[this._family];
