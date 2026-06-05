@@ -4,7 +4,7 @@
 
 import { WhoopClient } from './ble/client.js';
 import { openDb } from './data/db.js';
-import { insertSamplesBatch, startSession, endSession, logEvent } from './data/queries.js';
+import { insertSamplesBatch, startSession, endSession, logEvent, latestSample } from './data/queries.js';
 import { isoUtcNow } from './util/time.js';
 import { exportAllToJson, importAllFromJson, exportSamplesCsv, exportDailyMetricsCsv, exportJournalCsv, exportWorkoutsCsv } from './data/export.js';
 import {
@@ -1726,3 +1726,21 @@ const mobileConnectBtn = document.getElementById('mobile-connect-btn');
 if (mobileConnectBtn) {
   mobileConnectBtn.addEventListener('click', () => connectBtn.click());
 }
+
+// Refresh button — update live fields from IndexedDB without disconnecting
+window.refreshLiveFromDb = async function() {
+  if (!db) return;
+  const s = await latestSample(db);
+  if (!s) return;
+  const hrEl = document.getElementById('live-hr');
+  if (hrEl && s.heart_rate_bpm != null) hrEl.textContent = Math.round(s.heart_rate_bpm);
+  const spo2El = document.getElementById('live-spo2');
+  if (spo2El && s.spo2_pct != null) spo2El.textContent = Math.round(s.spo2_pct);
+  const tempEl = document.getElementById('live-temp');
+  if (tempEl && s.skin_temp_c != null) tempEl.textContent = s.skin_temp_c.toFixed(1);
+  const statusEl = document.getElementById('live-status');
+  if (statusEl && s.ts_utc) {
+    const ago = Math.round((Date.now() - new Date(s.ts_utc)) / 1000);
+    statusEl.textContent = ago < 60 ? `last sample ${ago}s ago` : `last sample ${Math.round(ago/60)}m ago`;
+  }
+};

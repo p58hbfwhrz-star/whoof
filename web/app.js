@@ -1582,6 +1582,7 @@ function init() {
       refreshBtn.style.opacity = "0.4";
       refreshBtn.style.pointerEvents = "none";
       await refreshAll();
+      if (typeof window.refreshLiveFromDb === "function") await window.refreshLiveFromDb();
       refreshBtn.style.opacity = "";
       refreshBtn.style.pointerEvents = "";
     });
