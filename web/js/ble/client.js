@@ -114,6 +114,17 @@ export class WhoopClient {
 
   on(event, fn) { return this._emitter.on(event, fn); }
   _emit(event, payload) { this._emitter.emit(event, payload); }
+  _setState(s) {
+    this._state = s;
+    const box = document.getElementById('ble-log');
+    if (box) {
+      const line = document.createElement('div');
+      line.textContent = new Date().toLocaleTimeString() + ' state=' + s;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+    this._emit('state', s);
+  }
 
   // ----- connection lifecycle ---------------------------------------------
 
