@@ -154,14 +154,10 @@ export class WhoopClient {
   async _connect() {
     this._setState('connecting');
     console.log('[whoof] gatt.connect start, already=' + this.device.gatt.connected);
-    if (!this.device.gatt.connected) {
-      // Bluefy's gatt.connect() promise never resolves — fire it without
-      // awaiting and give it 1.5s to connect under the hood, then proceed.
-      this.device.gatt.connect().catch(() => {});
-      await new Promise(r => setTimeout(r, 1500));
-    }
+    // Skip gatt.connect() entirely — Bluefy connects when the user selects
+    // the device in the picker, so the server is already usable.
     this.server = this.device.gatt;
-    console.log('[whoof] gatt proceed, connected=' + this.server.connected);
+    console.log('[whoof] gatt skipped, server=' + !!this.server);
 
     let service;
     try {
