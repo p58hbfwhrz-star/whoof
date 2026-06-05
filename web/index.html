@@ -709,8 +709,6 @@
         <div class="panel-subtitle">Real-time Whoop BLE telemetry streaming</div>
       </div>
       <span class="panel-date" id="live-status"></span>
-      <div id="ble-debug" style="font-size:11px;color:#aaa;padding:4px 0 0 0;">BLE packets: <span id="ble-pkt-count">0</span> | BT: <span id="ble-bt-avail">checking...</span></div>
-      <div id="ble-log" style="font-size:10px;color:#ff9;background:#111;padding:6px;margin-top:4px;max-height:120px;overflow-y:auto;border-radius:6px;"></div>
     </header>
     <div class="grid grid-live">
       <div class="card">
@@ -859,44 +857,6 @@
   }
 </script>
 <script>
-  // Redirect [whoof] logs to the on-screen debug box
-  (function() {
-    var orig = { log: console.log, error: console.error, warn: console.warn };
-    function appendLog(level, args) {
-      var msg = Array.from(args).map(function(a) {
-        try { return typeof a === 'object' ? JSON.stringify(a) : String(a); } catch(e) { return String(a); }
-      }).join(' ');
-      if (msg.indexOf('[whoof]') === -1) return;
-      var box = document.getElementById('ble-log');
-      if (!box) return;
-      var line = document.createElement('div');
-      line.style.color = level === 'error' ? '#f66' : level === 'warn' ? '#fa0' : '#ff9';
-      line.textContent = level.toUpperCase() + ': ' + msg;
-      box.appendChild(line);
-      box.scrollTop = box.scrollHeight;
-    }
-    console.log = function() { orig.log.apply(console, arguments); appendLog('log', arguments); };
-    console.error = function() { orig.error.apply(console, arguments); appendLog('error', arguments); };
-    console.warn = function() { orig.warn.apply(console, arguments); appendLog('warn', arguments); };
-  })();
-
-  // Basic capability check — shows in the Live tab debug line
-  (function() {
-    var el = document.getElementById('ble-bt-avail');
-    if (!el) return;
-    if (!navigator.bluetooth) {
-      el.textContent = 'NO BLUETOOTH API';
-      el.style.color = 'red';
-    } else {
-      navigator.bluetooth.getAvailability().then(function(a) {
-        el.textContent = a ? 'available' : 'unavailable';
-        el.style.color = a ? 'green' : 'red';
-      }).catch(function(e) {
-        el.textContent = 'error: ' + e.message;
-        el.style.color = 'red';
-      });
-    }
-  })();
 </script>
 </body>
 </html>

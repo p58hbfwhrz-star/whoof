@@ -114,7 +114,6 @@ export class WhoopClient {
 
   on(event, fn) { return this._emitter.on(event, fn); }
   _emit(event, payload) { this._emitter.emit(event, payload); }
-  _setState(s) { this._state = s; console.log('[whoof] state=' + s); this._emit('state', s); }
 
   // ----- connection lifecycle ---------------------------------------------
 
@@ -153,19 +152,15 @@ export class WhoopClient {
 
   async _connect() {
     this._setState('connecting');
-    console.log('[whoof] gatt.connect start, already=' + this.device.gatt.connected);
     if (this.device.gatt.connected) {
       this.server = this.device.gatt;
-      console.log('[whoof] gatt already connected');
     } else {
       // Bluefy: gatt.connect() resolves only after the OS connects.
       // Poll connected flag for up to 15s rather than awaiting the promise.
       this.device.gatt.connect().catch(() => {});
-      console.log('[whoof] waiting for gatt.connected...');
       await new Promise((resolve, reject) => {
         const start = Date.now();
         const iv = setInterval(() => {
-          console.log('[whoof] connected=' + this.device.gatt.connected);
           if (this.device.gatt.connected) {
             clearInterval(iv);
             resolve();
@@ -176,7 +171,6 @@ export class WhoopClient {
         }, 500);
       });
       this.server = this.device.gatt;
-      console.log('[whoof] gatt connected via poll');
     }
 
     function getServiceWithTimeout(server, uuid, ms) {
@@ -187,55 +181,39 @@ export class WhoopClient {
     }
     let service;
     try {
-      console.log('[whoof] probing whoop5 service');
       service = await getServiceWithTimeout(this.server, FAMILIES.whoop5.service, 5000);
       this._family = 'whoop5';
-      console.log('[whoof] whoop5 service found');
     } catch (err) {
       if (err && err.name && err.name !== 'NotFoundError') throw err;
-      console.log('[whoof] probing whoop4 service');
       service = await getServiceWithTimeout(this.server, FAMILIES.whoop4.service, 5000);
       this._family = 'whoop4';
-      console.log('[whoof] whoop4 service found');
     }
-    console.log('[whoof] family=' + this._family);
     const f = FAMILIES[this._family];
     this._emit('family', { family: this._family, name: f.name });
 
-    console.log('[whoof] getting characteristics');
     this.charCmd   = await service.getCharacteristic(f.command);
-    console.log('[whoof] charCmd ok');
     this.charResp  = await service.getCharacteristic(f.response);
-    console.log('[whoof] charResp ok');
     this.charData  = await service.getCharacteristic(f.data);
-    console.log('[whoof] charData ok');
     this.charEvent = await service.getCharacteristic(f.event);
-    console.log('[whoof] charEvent ok');
     try { this.charDiag = await service.getCharacteristic(f.diag); }
     catch { this.charDiag = null; }
 
-    console.log('[whoof] startNotifications data');
     this.charData.addEventListener('characteristicvaluechanged', (e) => this._onData(e));
     await this.charData.startNotifications();
 
-    console.log('[whoof] startNotifications resp');
     this.charResp.addEventListener('characteristicvaluechanged', (e) => this._onResponse(e));
     await this.charResp.startNotifications();
 
-    console.log('[whoof] startNotifications event');
     this.charEvent.addEventListener('characteristicvaluechanged', (e) => this._onEvent(e));
     await this.charEvent.startNotifications();
-    console.log('[whoof] all notifications started');
 
     if (this._family === 'whoop5') {
-      console.log('[whoof] sending CLIENT_HELLO_V5');
       try {
         await this.charCmd.writeValueWithoutResponse(CLIENT_HELLO_V5);
       } catch {
         await this.charCmd.writeValue(CLIENT_HELLO_V5);
       }
       this._clientHelloSent = true;
-      console.log('[whoof] CLIENT_HELLO_V5 sent');
     }
 
     this.connected = true;
@@ -258,11 +236,8 @@ export class WhoopClient {
     //        then backfill history in parallel. History can take up to 30s to
     //        complete (META_QUEUE_TIMEOUT_MS) and would block live data if awaited first.
     try {
-      console.log('[whoof] starting realtime, family=' + this._family);
       await this.startRealtime();
-      console.log('[whoof] realtime started OK');
     } catch (e) {
-      console.error('[whoof] startRealtime failed', e);
       this._emit('error', e);
     }
 
@@ -347,7 +322,6 @@ export class WhoopClient {
 
   _onData(e) {
     const { packets, error } = this._decodeNotification(e);
-    console.log('[whoof] _onData packets=' + (packets?.length ?? 0) + ' error=' + error);
     if (error) { this._emit('error', error); return; }
     for (const pkt of packets) this._handleDataPacket(pkt);
   }
