@@ -114,7 +114,7 @@ export class WhoopClient {
 
   on(event, fn) { return this._emitter.on(event, fn); }
   _emit(event, payload) { this._emitter.emit(event, payload); }
-  _setState(s) { this._state = s; this._emit('state', s); }
+  _setState(s) { this._state = s; console.log('[whoof] state=' + s); this._emit('state', s); }
 
   // ----- connection lifecycle ---------------------------------------------
 
@@ -228,8 +228,13 @@ export class WhoopClient {
     //        then backfill history in parallel. History can take up to 30s to
     //        complete (META_QUEUE_TIMEOUT_MS) and would block live data if awaited first.
     try {
+      console.log('[whoof] starting realtime, family=' + this._family);
       await this.startRealtime();
-    } catch (e) { this._emit('error', e); }
+      console.log('[whoof] realtime started OK');
+    } catch (e) {
+      console.error('[whoof] startRealtime failed', e);
+      this._emit('error', e);
+    }
 
     // 3b. (5.0 only) Poke the diag characteristic so the strap starts emitting
     //     skin-temp candidate packets during this session. Fire-and-forget —
@@ -312,6 +317,7 @@ export class WhoopClient {
 
   _onData(e) {
     const { packets, error } = this._decodeNotification(e);
+    console.log('[whoof] _onData packets=' + (packets?.length ?? 0) + ' error=' + error);
     if (error) { this._emit('error', error); return; }
     for (const pkt of packets) this._handleDataPacket(pkt);
   }
