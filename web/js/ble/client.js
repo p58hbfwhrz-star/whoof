@@ -224,12 +224,12 @@ export class WhoopClient {
       }
     } catch (e) { this._emit('error', e); }
 
-    // 3. Backfill historical data BEFORE realtime so we don't intermingle.
+    // 3 & 4. Start realtime immediately so live HR shows up on mobile/Bluefy,
+    //        then backfill history in parallel. History can take up to 30s to
+    //        complete (META_QUEUE_TIMEOUT_MS) and would block live data if awaited first.
     try {
-      await this.downloadHistory();
-    } catch (e) {
-      this._emit('error', e);
-    }
+      await this.startRealtime();
+    } catch (e) { this._emit('error', e); }
 
     // 3b. (5.0 only) Poke the diag characteristic so the strap starts emitting
     //     skin-temp candidate packets during this session. Fire-and-forget —
@@ -238,10 +238,12 @@ export class WhoopClient {
       try { await this.sendDebugSkinTempCommand(); } catch (e) { this._emit('error', e); }
     }
 
-    // 4. Start realtime
+    // Backfill historical data after realtime is already running.
     try {
-      await this.startRealtime();
-    } catch (e) { this._emit('error', e); }
+      await this.downloadHistory();
+    } catch (e) {
+      this._emit('error', e);
+    }
 
     // 5. Initial battery sample
     this.getBatteryLevel().catch(() => {});
