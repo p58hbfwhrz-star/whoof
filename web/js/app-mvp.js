@@ -156,6 +156,8 @@ async function setupAndConnect(deviceToUse = null) {
     // Update Live tab fields directly from BLE packet (works without a server)
     const liveStatus = document.getElementById('live-status');
     if (liveStatus) liveStatus.textContent = 'live · connected';
+    const blePktCount = document.getElementById('ble-pkt-count');
+    if (blePktCount) blePktCount.textContent = sampleCount;
     const liveRr = document.getElementById('live-rr');
     if (liveRr && rrList.length) liveRr.textContent = rrList[0];
 
