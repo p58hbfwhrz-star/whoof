@@ -1382,7 +1382,10 @@ function renderTrendsTable(days) {
 /* ───────────────────────────── Live tab ────────────────────────────── */
 
 async function loadLive() {
-  const data = await fetchJSON("/api/live?seconds=300");
+  // If no server is available (e.g. Bluefy/mobile), live fields are updated
+  // directly by app-mvp.js via BLE events — just skip the API call gracefully.
+  let data = { points: [], latest_sample: null, battery: null };
+  try { data = await fetchJSON("/api/live?seconds=300"); } catch (_) {}
   const last = data.latest_sample;
   if (last) {
     $("live-hr").textContent = fmtInt(last.heart_rate_bpm);
@@ -1390,8 +1393,8 @@ async function loadLive() {
     $("live-temp").textContent = last.skin_temp_c != null ? last.skin_temp_c.toFixed(1) : "—";
     const ago = Math.round((Date.now() - new Date(last.ts_utc)) / 1000);
     $("live-status").textContent = ago < 60 ? `last sample ${ago}s ago` : `last sample ${Math.round(ago / 60)}m ago`;
-  } else {
-    $("live-status").textContent = "no samples yet";
+  } else if (!$("live-hr").textContent || $("live-hr").textContent === "—") {
+    $("live-status").textContent = "Connect your strap to see live data";
   }
   $("live-battery").textContent = data.battery ? data.battery.detail : "—";
 
