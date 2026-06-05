@@ -259,19 +259,21 @@ export class WhoopClient {
       try { await this.sendDebugSkinTempCommand(); } catch (e) { this._emit('error', e); }
     }
 
-    // Backfill historical data after realtime is already running.
-    try {
-      await this.downloadHistory();
-    } catch (e) {
-      this._emit('error', e);
-    }
-
-    // Re-send startRealtime after history download — the history flow can
-    // consume or interfere with the realtime stream on some implementations.
-    try {
-      await this.startRealtime();
-    } catch (e) {
-      this._emit('error', e);
+    // Skip history download on mobile — the BLE write commands needed to
+    // initiate/ack the historical dump hang in Bluefy and block realtime.
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (!isMobile) {
+      try {
+        await this.downloadHistory();
+      } catch (e) {
+        this._emit('error', e);
+      }
+      // Re-send startRealtime after history download completes.
+      try {
+        await this.startRealtime();
+      } catch (e) {
+        this._emit('error', e);
+      }
     }
 
     // 5. Initial battery sample
