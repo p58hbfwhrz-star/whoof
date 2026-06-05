@@ -153,50 +153,59 @@ export class WhoopClient {
 
   async _connect() {
     this._setState('connecting');
+    console.log('[whoof] gatt.connect start');
     this.server = await this.device.gatt.connect();
+    console.log('[whoof] gatt.connect done');
 
-    // Detect the strap generation: probe the 5.0 service first, fall back to
-    // 4.0 only when that service is genuinely absent (NotFoundError). Any other
-    // failure (mid-connection GATT error, power event) must propagate, not be
-    // mistaken for "this is a 4.0 strap" — that would send 4.0 frames to a 5.0
-    // device and silently break the session.
     let service;
     try {
+      console.log('[whoof] probing whoop5 service');
       service = await this.server.getPrimaryService(FAMILIES.whoop5.service);
       this._family = 'whoop5';
     } catch (err) {
       if (err && err.name && err.name !== 'NotFoundError') throw err;
+      console.log('[whoof] probing whoop4 service');
       service = await this.server.getPrimaryService(FAMILIES.whoop4.service);
       this._family = 'whoop4';
     }
+    console.log('[whoof] family=' + this._family);
     const f = FAMILIES[this._family];
     this._emit('family', { family: this._family, name: f.name });
 
+    console.log('[whoof] getting characteristics');
     this.charCmd   = await service.getCharacteristic(f.command);
+    console.log('[whoof] charCmd ok');
     this.charResp  = await service.getCharacteristic(f.response);
+    console.log('[whoof] charResp ok');
     this.charData  = await service.getCharacteristic(f.data);
+    console.log('[whoof] charData ok');
     this.charEvent = await service.getCharacteristic(f.event);
-    // Diagnostic characteristic (slot 0007) — optional. Used only to elicit 5.0
-    // skin-temp candidate packets; its absence must never abort the connection.
+    console.log('[whoof] charEvent ok');
     try { this.charDiag = await service.getCharacteristic(f.diag); }
     catch { this.charDiag = null; }
 
+    console.log('[whoof] startNotifications data');
     this.charData.addEventListener('characteristicvaluechanged', (e) => this._onData(e));
     await this.charData.startNotifications();
 
+    console.log('[whoof] startNotifications resp');
     this.charResp.addEventListener('characteristicvaluechanged', (e) => this._onResponse(e));
     await this.charResp.startNotifications();
 
+    console.log('[whoof] startNotifications event');
     this.charEvent.addEventListener('characteristicvaluechanged', (e) => this._onEvent(e));
     await this.charEvent.startNotifications();
+    console.log('[whoof] all notifications started');
 
-    // 5.0 straps ignore every command until this CLIENT_HELLO lands, so a failed
-    // write means a dead session — let it propagate so _connect rejects and the
-    // reconnect backoff retries, rather than limping on with a strap that
-    // silently drops all subsequent commands.
     if (this._family === 'whoop5') {
-      await this.charCmd.writeValue(CLIENT_HELLO_V5);
+      console.log('[whoof] sending CLIENT_HELLO_V5');
+      try {
+        await this.charCmd.writeValueWithoutResponse(CLIENT_HELLO_V5);
+      } catch {
+        await this.charCmd.writeValue(CLIENT_HELLO_V5);
+      }
       this._clientHelloSent = true;
+      console.log('[whoof] CLIENT_HELLO_V5 sent');
     }
 
     this.connected = true;
