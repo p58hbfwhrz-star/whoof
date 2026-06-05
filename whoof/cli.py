@@ -22,7 +22,11 @@ from typing import Optional
 
 import click
 
-from . import __version__, db, dashboard, metrics, recorder
+from . import __version__, db, dashboard, metrics
+try:
+    from . import recorder
+except ImportError:
+    recorder = None  # type: ignore[assignment]
 
 
 def _setup_logging(verbose: bool) -> None:
