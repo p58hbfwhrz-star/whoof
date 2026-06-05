@@ -440,7 +440,13 @@ export class WhoopClient {
       ? buildV5CommandFrame(this._seq, cmd, payload)
       : buildCommandFrame(cmd, payload, this._seq);
     this._seq = (this._seq + 1) & 0xff;
-    await this.charCmd.writeValue(frame);
+    // Some browsers (Bluefy) hang on writeValue if the characteristic only
+    // supports write-without-response. Try that first, fall back to writeValue.
+    try {
+      await this.charCmd.writeValueWithoutResponse(frame);
+    } catch {
+      await this.charCmd.writeValue(frame);
+    }
   }
 
   async startRealtime() {
