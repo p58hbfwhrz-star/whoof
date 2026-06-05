@@ -153,18 +153,15 @@ export class WhoopClient {
 
   async _connect() {
     this._setState('connecting');
-    // Some browsers (Bluefy) auto-connect on requestDevice and hang on a
-    // second gatt.connect() call. Skip if already connected.
     console.log('[whoof] gatt.connect start, already=' + this.device.gatt.connected);
     if (!this.device.gatt.connected) {
-      this.server = await Promise.race([
-        this.device.gatt.connect(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('gatt.connect timeout')), 8000)),
-      ]);
-    } else {
-      this.server = this.device.gatt;
+      // Bluefy's gatt.connect() promise never resolves — fire it without
+      // awaiting and give it 1.5s to connect under the hood, then proceed.
+      this.device.gatt.connect().catch(() => {});
+      await new Promise(r => setTimeout(r, 1500));
     }
-    console.log('[whoof] gatt.connect done, connected=' + this.server.connected);
+    this.server = this.device.gatt;
+    console.log('[whoof] gatt proceed, connected=' + this.server.connected);
 
     let service;
     try {
