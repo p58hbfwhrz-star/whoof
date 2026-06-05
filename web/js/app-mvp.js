@@ -1714,3 +1714,9 @@ window.addEventListener('whoop-data-changed', () => renderRecoveryCal());
     history.replaceState(null, '', `/#${tab}`);
   }
 })();
+
+// Mobile bottom-nav Connect button — mirrors the sidebar Connect Whoop button
+const mobileConnectBtn = document.getElementById('mobile-connect-btn');
+if (mobileConnectBtn) {
+  mobileConnectBtn.addEventListener('click', () => connectBtn.click());
+}
