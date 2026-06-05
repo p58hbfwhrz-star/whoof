@@ -266,6 +266,14 @@ export class WhoopClient {
       this._emit('error', e);
     }
 
+    // Re-send startRealtime after history download — the history flow can
+    // consume or interfere with the realtime stream on some implementations.
+    try {
+      await this.startRealtime();
+    } catch (e) {
+      this._emit('error', e);
+    }
+
     // 5. Initial battery sample
     this.getBatteryLevel().catch(() => {});
   }
@@ -333,6 +341,14 @@ export class WhoopClient {
 
   _onData(e) {
     const { packets, error } = this._decodeNotification(e);
+    const box = document.getElementById('ble-log');
+    if (box && box.children.length < 20) {
+      const v = bytesOf(e.target.value);
+      const line = document.createElement('div');
+      line.textContent = 'pkt[' + v.length + '] type=' + (v[0] ?? '?') + ' b5=' + (v[5] ?? '?') + ' err=' + (error?.message ?? 'none');
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
     if (error) { this._emit('error', error); return; }
     for (const pkt of packets) this._handleDataPacket(pkt);
   }
