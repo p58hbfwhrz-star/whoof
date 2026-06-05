@@ -1574,6 +1574,18 @@ function init() {
   }
   refreshAll();
   setInterval(refreshAll, 10000);
+
+  // Refresh button — reloads dashboard data without touching BLE connection
+  const refreshBtn = $("topbar-refresh");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", async () => {
+      refreshBtn.style.opacity = "0.4";
+      refreshBtn.style.pointerEvents = "none";
+      await refreshAll();
+      refreshBtn.style.opacity = "";
+      refreshBtn.style.pointerEvents = "";
+    });
+  }
   // Allow other modules (app-mvp.js, etc.) to trigger a re-render when they
   // mutate IndexedDB.
   window.addEventListener("whoop-data-changed", () => refreshAll());
